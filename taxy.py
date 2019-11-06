@@ -27,7 +27,7 @@ fuel_idx = 2
 client = 3
 rem_clients = 4
 venit = 5
-grid_idx = 6
+clients_list = 6
 
 def make_move(state, move):
     if (move == N):
@@ -52,18 +52,60 @@ def make_move(state, move):
 def get_client_pay(client):
     return clients[client][4]
 
-def pick_up_client(state):
+def get_client_for_pos(state):
     x = state[x_idx]
     y = state[y_idx]
-    grid = state[grid_idx]
 
-    state[client] = grid[x][y][0]
-    grid[x][y][0] = -1
+    for i in state[clients_list]:
+        current_client = clients[i]
+        if current_client[0] == x and current_client[1] == y:
+            return i
+
+    return -1
+
+def pick_up_client(state):
+    state[client] = get_client_for_pos(state)
+    state[clients_list].remove(state[client])
+
+def client_still_available(state):
+    x = state[x_idx]
+    y = state[y_idx]
+    possible_clients = [clients[i] for i in state[clients_list]]
+    start = [(x,y) for (x,y,_,_,_) in possible_clients]
+
+    if (x,y) in start:
+        return True
+    return False
+
+def possible_profit(state):
+    possible_clients = [clients[i] for i in state[clients_list]]
+    sorted_by_price = sorted(possible_clients, reverse=True, key=lambda tup: tup[4])
+    current_fuel = state[fuel_idx]
+    current_taxi_x = state[x_idx]
+    current_taxi_y = state[y_idx]
+    final_profit = 0
+    still_going = True
+
+    while still_going:
+        still_going = False
+        not_elim_idx = []
+        for idx, (x, y, dx, dy, v) in enumerate(sorted_by_price):
+            client_distance = abs(x-dx) + abs(y-dy)
+            taxi_distance = abs(current_taxi_x - x) + abs(current_taxi_y - y)
+            if (client_distance + taxi_distance) < current_fuel:
+                final_profit += v
+                current_fuel -= (client_distance + taxi_distance)
+                still_going = True
+            else:
+                not_elim_idx.append(idx)
+
+        sorted_by_price = [sorted_by_price[i] for i in not_elim_idx]
+
+    return final_profit
 
 def get_pos_moves(state):
     x = state[x_idx]
     y = state[y_idx]
-    grid = state[grid_idx]
     moves = copy.deepcopy(grid[x][y][1])
 
     if (state[client] != -1):
@@ -71,20 +113,20 @@ def get_pos_moves(state):
         if x == dx and y == dy:
             moves.append(D)
     else:
-        if grid[x][y][0] != -1:
+        if client_still_available(state):
             moves.append(P)
 
     return moves
 
 def is_final(state):
+    # if no more clients
     if state[rem_clients] == 0 and state[client] == -1:
         return True
+    # if no more fuel
     if state[fuel_idx] == 0:
         return True
-
-    max_from_clients = sum([c for _, _, _, _, c in clients])
-
-    if max(max_from_clients - state[fuel_idx] - state[venit], 0) == 0:
+    # # if we can win nothing if we continue
+    if possible_profit(state) < state[fuel_idx] and state[client] == -1:
         return True
 
     return False
@@ -113,15 +155,15 @@ def reconstruct_road(final_state, road):
     return actions
 
 def breadth_first_search():
-    s0 = [start_x, start_y, fuel, -1, len(clients), 0, copy.deepcopy(grid)]
+    s0 = [start_x, start_y, fuel, -1, len(clients), 0, list(range(len(clients)))]
     open = [s0]
     act = {}
-    visited = {}
     act[tuple(s0[:-1])] = None
+    visited = {}
+    visited[tuple(s0[:2])] = s0[2:-1]
 
     while open != []:
         current = open.pop(0)
-        visited[tuple(current[:2])] = current[2:-1]
 
         if is_final(current):
             return (current, act)
@@ -133,12 +175,14 @@ def breadth_first_search():
 
                 if tuple(next_state[:2]) in visited:
                     f, c, r, v = visited[tuple(next_state[:2])]
-                    if c == next_state[client] and r == next_state[rem_clients] \
-                        and f >= next_state[fuel_idx] and v <= next_state[venit]:
+
+                    if c == next_state[client] and r >= next_state[rem_clients] \
+                        and f >= next_state[fuel_idx] and v >= next_state[venit]:
                         continue
 
                 act[tuple(next_state[:-1])] = (copy.deepcopy(current), move)
                 open.append(next_state)
+                visited[tuple(next_state[:2])] = next_state[2:-1]
 
     return False
 
@@ -339,7 +383,6 @@ def hill_climbing_search(e):
             current_cost = next_maxim_cost
     return(current, act)
 
-
 def get_start_pos_clients():
     return [(x,y) for (x,y,_,_,_) in clients]
 
@@ -420,18 +463,20 @@ def print_solution(state, road):
             final_road += ", "
     final_road += "]"
     print("Road: " + final_road)
+    print("Final position: (" + str(state[x_idx]) + "," + str(state[y_idx]) + ")")
 
 def main():
     if len(sys.argv) == 1:
         print("No input file given.")
+        return
 
     read_input(sys.argv[1])
 
-    # # BFS optimized solution
-    # print("BFS")
-    # final_state_bfs, road = breadth_first_search()
-    # print_solution(final_state_bfs, road)
-    # print("")
+    # BFS optimized solution
+    print("BFS")
+    final_state_bfs, road = breadth_first_search()
+    print_solution(final_state_bfs, road)
+    print("")
 
     # # Uniform cost search solution
     # print("UCS")
@@ -462,23 +507,23 @@ def main():
     # print("Found for depth " + str(dept))
     # print("")
 
-    # Greedy bfs optimized solution
-    print("GBFS")
-    final_state_gbfs, road = greedy_best_first_search(h1)
-    print_solution(final_state_gbfs, road)
-    print("")
+    # # Greedy bfs optimized solution
+    # print("GBFS")
+    # final_state_gbfs, road = greedy_best_first_search(h1)
+    # print_solution(final_state_gbfs, road)
+    # print("")
 
-    # A*
-    print("A*")
-    final_state_a_star, road = a_star(h1)
-    print_solution(final_state_a_star, road)
-    print("")
+    # # A*
+    # print("A*")
+    # final_state_a_star, road = a_star(h1)
+    # print_solution(final_state_a_star, road)
+    # print("")
 
-    # Hill climb search
-    print("HCS")
-    final_state_hcs, road = hill_climbing_search(h1)
-    print_solution(final_state_hcs, road)
-    print("")
+    # # Hill climb search
+    # print("HCS")
+    # final_state_hcs, road = hill_climbing_search(h1)
+    # print_solution(final_state_hcs, road)
+    # print("")
 
 if __name__== "__main__":
     main()
