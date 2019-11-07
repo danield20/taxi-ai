@@ -126,8 +126,8 @@ def is_final(state):
     if state[fuel_idx] == 0:
         return True
     # # if we can win nothing if we continue
-    if possible_profit(state) < state[fuel_idx] and state[client] == -1:
-        return True
+    # if possible_profit(state) < state[fuel_idx] and state[client] == -1:
+    #     return True
 
     return False
 
@@ -187,17 +187,16 @@ def breadth_first_search():
     return False
 
 def uniform_cost_search():
-    s0 = [start_x, start_y, fuel, -1, len(clients), 0, copy.deepcopy(grid)]
+    s0 = [start_x, start_y, fuel, -1, len(clients), 0, list(range(len(clients)))]
     open = []
     heappush(open, (0, s0)) # tuplu de cost real, nod
     act = {}
-    visited = {}
     act[tuple(s0[:-1])] = None
+    visited = {}
+    visited[tuple(s0[:2])] = s0[2:-1]
 
     while open != []:
         (c, current) = heappop(open)
-
-        visited[tuple(current[:2])] = current[2:-1]
 
         if is_final(current):
             return (current, act)
@@ -219,19 +218,20 @@ def uniform_cost_search():
                     heappush(open, (c + 1, next_state))
                 else:
                     heappush(open, (c, next_state))
+                visited[tuple(next_state[:2])] = next_state[2:-1]
 
     return False
 
 def depth_first_search():
-    s0 = [start_x, start_y, fuel, -1, len(clients), 0, copy.deepcopy(grid)]
+    s0 = [start_x, start_y, fuel, -1, len(clients), 0, list(range(len(clients)))]
     open = [s0]
     act = {}
-    visited = {}
     act[tuple(s0[:-1])] = None
+    visited = {}
+    visited[tuple(s0[:2])] = s0[2:-1]
 
     while open != []:
         current = open.pop(0)
-        visited[tuple(current[:2])] = current[2:-1]
 
         if is_final(current):
             return (current, act)
@@ -249,21 +249,23 @@ def depth_first_search():
 
                 act[tuple(next_state[:-1])] = (copy.deepcopy(current), move)
                 open.insert(0, next_state)
+                visited[tuple(next_state[:2])] = next_state[2:-1]
 
     return False
 
 def depth_limited_search(max_depth):
-    s0 = [start_x, start_y, fuel, -1, len(clients), 0, copy.deepcopy(grid)]
+    s0 = [start_x, start_y, fuel, -1, len(clients), 0, list(range(len(clients)))]
     open = [s0]
     depth = [0]
     act = {}
-    visited = {}
     act[tuple(s0[:-1])] = None
+    visited = {}
+    visited[tuple(s0[:2])] = s0[2:-1]
+
 
     while open != []:
         current = open.pop(0)
         current_depth = depth.pop(0)
-        visited[tuple(current[:2])] = current[2:-1]
 
         if (current_depth == max_depth):
             continue
@@ -285,6 +287,7 @@ def depth_limited_search(max_depth):
                 act[tuple(next_state[:-1])] = (copy.deepcopy(current), move)
                 open.insert(0, next_state)
                 depth.insert(0, current_depth + 1)
+                visited[tuple(next_state[:2])] = next_state[2:-1]
 
     return False
 
@@ -296,7 +299,7 @@ def iterative_deepening_search():
         depth += 1
 
 def greedy_best_first_search(e):
-    s0 = [start_x, start_y, fuel, -1, len(clients), 0, copy.deepcopy(grid)]
+    s0 = [start_x, start_y, fuel, -1, len(clients), 0, list(range(len(clients)))]
     open = []
     heappush(open, (e(s0), s0)) # tuplu de cost euristic, nod
     act = {}
@@ -327,7 +330,7 @@ def greedy_best_first_search(e):
                 heappush(open, (e(next_state), next_state))
 
 def a_star(e):
-    s0 = [start_x, start_y, fuel, -1, len(clients), 0, copy.deepcopy(grid)]
+    s0 = [start_x, start_y, fuel, -1, len(clients), 0, list(range(len(clients)))]
     open = []
     heappush(open, (0 + e(s0), s0)) # tuplu de cost euristic, nod
     act = {}
@@ -357,7 +360,7 @@ def a_star(e):
                         act[tuple(next_state[:-1])] = (copy.deepcopy(current), move)
 
 def hill_climbing_search(e):
-    s0 = [start_x, start_y, fuel, -1, len(clients), 0, copy.deepcopy(grid)]
+    s0 = [start_x, start_y, fuel, -1, len(clients), 0, list(range(len(clients)))]
     current = s0
     current_cost = (0 - e(current), 0) # g(s) + h(s), g(s), h(s) = -e(s)
     act = {}
@@ -478,52 +481,52 @@ def main():
     print_solution(final_state_bfs, road)
     print("")
 
-    # # Uniform cost search solution
-    # print("UCS")
-    # final_state_ucs, road = uniform_cost_search()
-    # print_solution(final_state_ucs, road)
-    # print("")
+    # Uniform cost search solution
+    print("UCS")
+    final_state_ucs, road = uniform_cost_search()
+    print_solution(final_state_ucs, road)
+    print("")
 
-    # # Depth first search
-    # print("DFS")
-    # final_state_dfs, road = depth_first_search()
-    # print_solution(final_state_dfs, road)
-    # print("")
+    # Depth first search
+    print("DFS")
+    final_state_dfs, road = depth_first_search()
+    print_solution(final_state_dfs, road)
+    print("")
 
-    # # Depth limited search
-    # print("DLS")
-    # max_depth = 10
-    # if depth_limited_search(max_depth) != False:
-    #     final_state_dls, road = depth_limited_search(max_depth)
-    #     print_solution(final_state_dls, road)
-    #     print("")
-    # else:
-    #     print("Solution not found for depth limited search for given depth\n")
+    # Depth limited search
+    print("DLS")
+    max_depth = 50
+    if depth_limited_search(max_depth) != False:
+        final_state_dls, road = depth_limited_search(max_depth)
+        print_solution(final_state_dls, road)
+        print("")
+    else:
+        print("Solution not found for depth limited search for given depth\n")
 
-    # # Iterative deepening
+    # Iterative deepening
     # print("ID")
     # (final_state_id, road), dept = iterative_deepening_search()
     # print_solution(final_state_id, road)
     # print("Found for depth " + str(dept))
     # print("")
 
-    # # Greedy bfs optimized solution
-    # print("GBFS")
-    # final_state_gbfs, road = greedy_best_first_search(h1)
-    # print_solution(final_state_gbfs, road)
-    # print("")
+    # Greedy bfs optimized solution
+    print("GBFS")
+    final_state_gbfs, road = greedy_best_first_search(h1)
+    print_solution(final_state_gbfs, road)
+    print("")
 
-    # # A*
-    # print("A*")
-    # final_state_a_star, road = a_star(h1)
-    # print_solution(final_state_a_star, road)
-    # print("")
+    # A*
+    print("A*")
+    final_state_a_star, road = a_star(h1)
+    print_solution(final_state_a_star, road)
+    print("")
 
-    # # Hill climb search
-    # print("HCS")
-    # final_state_hcs, road = hill_climbing_search(h1)
-    # print_solution(final_state_hcs, road)
-    # print("")
+    # Hill climb search
+    print("HCS")
+    final_state_hcs, road = hill_climbing_search(h1)
+    print_solution(final_state_hcs, road)
+    print("")
 
 if __name__== "__main__":
     main()
