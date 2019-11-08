@@ -1,6 +1,7 @@
 import sys
 import copy
 from heapq import heappop, heappush
+import math
 
 #* Initial configurations
 height = 0
@@ -77,29 +78,81 @@ def client_still_available(state):
         return True
     return False
 
+def get_distance_to_client(state, client):
+    current_taxi_x = state[x_idx]
+    current_taxi_y = state[y_idx]
+    client_x = client[0]
+    client_y = client[1]
+
+    return abs(current_taxi_x - client_x) + abs(current_taxi_y - client_y)
+
+def get_client_travel(client):
+    x, y, dx, dy, _ = client
+
+    return abs(x - dx) + abs(y - dy)
+
+def evaluate_client(client, x, y):
+    price = client[4]
+    d_to_client = abs(client[0] - x) + abs(client[1] - x)
+    road_distance = abs(client[0] - client[2]) + abs(client[1] - client[3])
+    return price - d_to_client - road_distance
+
+def get_distance_to_best_reachable_client(state):
+    possible_clients = [clients[i] for i in state[clients_list]]
+
+    if state[client] != -1 or state[fuel_idx] == 0 or possible_clients == []:
+        return 0
+
+    current_taxi_x = state[x_idx]
+    current_taxi_y = state[y_idx]
+    sorted_by_quality = sorted(possible_clients, reverse=True,\
+                        key=lambda tup: evaluate_client(tup,current_taxi_x, current_taxi_y))
+
+    for current_client in sorted_by_quality:
+        if get_distance_to_client(state, current_client) + get_client_travel(current_client) <= state[fuel_idx]:
+            return get_distance_to_client(state, current_client)
+
+    return math.inf
+
 def possible_profit(state):
     possible_clients = [clients[i] for i in state[clients_list]]
-    sorted_by_price = sorted(possible_clients, reverse=True, key=lambda tup: tup[4])
+
     current_fuel = state[fuel_idx]
     current_taxi_x = state[x_idx]
     current_taxi_y = state[y_idx]
     final_profit = 0
     still_going = True
 
+    if state[client] != -1:
+        current_client = clients[state[client]]
+        remaining_distance = abs(current_taxi_x - current_client[2]) + abs(current_taxi_y - current_client[3])
+        final_profit = current_client[4] - remaining_distance
+        if current_fuel < remaining_distance:
+            return 0
+        current_fuel -= remaining_distance
+
+    sorted_by_quality = sorted(possible_clients, reverse=True,\
+                    key=lambda tup: evaluate_client(tup,current_taxi_x, current_taxi_y))
+
     while still_going:
         still_going = False
         not_elim_idx = []
-        for idx, (x, y, dx, dy, v) in enumerate(sorted_by_price):
+
+        for idx, (x, y, dx, dy, v) in enumerate(sorted_by_quality):
             client_distance = abs(x-dx) + abs(y-dy)
             taxi_distance = abs(current_taxi_x - x) + abs(current_taxi_y - y)
-            if (client_distance + taxi_distance) < current_fuel:
-                final_profit += v
+            if (client_distance + taxi_distance) <= current_fuel and still_going != True:
+                final_profit += (v - client_distance)
                 current_fuel -= (client_distance + taxi_distance)
+                current_taxi_x = dx
+                current_taxi_y = dy
                 still_going = True
             else:
                 not_elim_idx.append(idx)
 
-        sorted_by_price = [sorted_by_price[i] for i in not_elim_idx]
+        sorted_by_quality = [sorted_by_quality[i] for i in not_elim_idx]
+        sorted_by_quality = sorted(sorted_by_quality, reverse=True,\
+                        key=lambda tup: evaluate_client(tup,current_taxi_x, current_taxi_y))
 
     return final_profit
 
@@ -122,9 +175,18 @@ def is_final(state):
     # if no more clients
     if state[rem_clients] == 0 and state[client] == -1:
         return True
+
     # if no more fuel
     if state[fuel_idx] == 0:
+        if state[client] != -1:
+            if D in get_pos_moves(state):
+                return False
         return True
+
+    # if we can't reach another client
+    if get_distance_to_best_reachable_client(state) == math.inf and state[client] == -1:
+        return True
+
     # # if we can win nothing if we continue
     # if possible_profit(state) < state[fuel_idx] and state[client] == -1:
     #     return True
@@ -139,7 +201,14 @@ def h1(state):
 def h2(state):
     max_from_clients = sum([c for _, _, _, _, c in clients])
 
-    return max_from_clients - state[venit]
+    if state[client] != -1:
+        _, _, dx, dy, _ = clients[state[client]]
+        client_destination_weigh = abs(state[x_idx] - dx) + abs(state[y_idx] - dy)
+    else:
+        client_destination_weigh = 0
+
+    return max_from_clients - state[venit] - possible_profit(state) \
+        + get_distance_to_best_reachable_client(state) + client_destination_weigh * 2
 
 def reconstruct_road(final_state, road):
     actions = []
@@ -303,13 +372,12 @@ def greedy_best_first_search(e):
     open = []
     heappush(open, (e(s0), s0)) # tuplu de cost euristic, nod
     act = {}
-    visited = {}
     act[tuple(s0[:-1])] = None
+    visited = {}
+    visited[tuple(s0[:2])] = s0[2:-1]
 
     while open != []:
         (c, current) = heappop(open)
-
-        visited[tuple(current[:2])] = current[2:-1]
 
         if is_final(current):
             return (current, act)
@@ -328,6 +396,7 @@ def greedy_best_first_search(e):
                 act[tuple(next_state[:-1])] = (copy.deepcopy(current), move)
 
                 heappush(open, (e(next_state), next_state))
+                visited[tuple(next_state[:2])] = next_state[2:-1]
 
 def a_star(e):
     s0 = [start_x, start_y, fuel, -1, len(clients), 0, list(range(len(clients)))]
@@ -469,6 +538,7 @@ def print_solution(state, road):
     print("Final position: (" + str(state[x_idx]) + "," + str(state[y_idx]) + ")")
 
 def main():
+
     if len(sys.argv) == 1:
         print("No input file given.")
         return
@@ -510,23 +580,46 @@ def main():
     # print("Found for depth " + str(dept))
     # print("")
 
+    heuristic = h1
+    print("First heuristic: ", heuristic.__name__)
     # Greedy bfs optimized solution
     print("GBFS")
-    final_state_gbfs, road = greedy_best_first_search(h1)
+    final_state_gbfs, road = greedy_best_first_search(heuristic)
     print_solution(final_state_gbfs, road)
     print("")
 
     # A*
     print("A*")
-    final_state_a_star, road = a_star(h1)
+    final_state_a_star, road = a_star(heuristic)
     print_solution(final_state_a_star, road)
     print("")
 
     # Hill climb search
     print("HCS")
-    final_state_hcs, road = hill_climbing_search(h1)
+    final_state_hcs, road = hill_climbing_search(heuristic)
     print_solution(final_state_hcs, road)
     print("")
+
+    heuristic = h2
+    print("Second heuristic: ", heuristic.__name__)
+    # Greedy bfs optimized solution
+    print("GBFS")
+    final_state_gbfs, road = greedy_best_first_search(heuristic)
+    print_solution(final_state_gbfs, road)
+    print("")
+
+    # A*
+    print("A*")
+    final_state_a_star, road = a_star(heuristic)
+    print_solution(final_state_a_star, road)
+    print("")
+
+    # Hill climb search
+    print("HCS")
+    final_state_hcs, road = hill_climbing_search(heuristic)
+    print_solution(final_state_hcs, road)
+    print("")
+
 
 if __name__== "__main__":
     main()
