@@ -2,6 +2,7 @@ import sys
 import copy
 from heapq import heappop, heappush
 import math
+import time
 
 #* Initial configurations
 height = 0
@@ -29,6 +30,9 @@ client = 3
 rem_clients = 4
 venit = 5
 clients_list = 6
+
+#* To be used when counting visited states
+nr_visited_states = 0
 
 def make_move(state, move):
     if (move == N):
@@ -112,7 +116,7 @@ def get_distance_to_best_reachable_client(state):
         if get_distance_to_client(state, current_client) + get_client_travel(current_client) <= state[fuel_idx]:
             return get_distance_to_client(state, current_client)
 
-    return math.inf
+    return 100000
 
 def possible_profit(state):
     possible_clients = [clients[i] for i in state[clients_list]]
@@ -184,7 +188,7 @@ def is_final(state):
         return True
 
     # if we can't reach another client
-    if get_distance_to_best_reachable_client(state) == math.inf and state[client] == -1:
+    if get_distance_to_best_reachable_client(state) == 100000 and state[client] == -1:
         return True
 
     # # if we can win nothing if we continue
@@ -224,6 +228,7 @@ def reconstruct_road(final_state, road):
     return actions
 
 def breadth_first_search():
+    global nr_visited_states
     s0 = [start_x, start_y, fuel, -1, len(clients), 0, list(range(len(clients)))]
     open = [s0]
     act = {}
@@ -233,6 +238,7 @@ def breadth_first_search():
 
     while open != []:
         current = open.pop(0)
+        nr_visited_states += 1
 
         if is_final(current):
             return (current, act)
@@ -256,6 +262,7 @@ def breadth_first_search():
     return False
 
 def uniform_cost_search():
+    global nr_visited_states
     s0 = [start_x, start_y, fuel, -1, len(clients), 0, list(range(len(clients)))]
     open = []
     heappush(open, (0, s0)) # tuplu de cost real, nod
@@ -266,6 +273,7 @@ def uniform_cost_search():
 
     while open != []:
         (c, current) = heappop(open)
+        nr_visited_states += 1
 
         if is_final(current):
             return (current, act)
@@ -292,6 +300,8 @@ def uniform_cost_search():
     return False
 
 def depth_first_search():
+    global nr_visited_states
+
     s0 = [start_x, start_y, fuel, -1, len(clients), 0, list(range(len(clients)))]
     open = [s0]
     act = {}
@@ -301,6 +311,7 @@ def depth_first_search():
 
     while open != []:
         current = open.pop(0)
+        nr_visited_states += 1
 
         if is_final(current):
             return (current, act)
@@ -323,6 +334,8 @@ def depth_first_search():
     return False
 
 def depth_limited_search(max_depth):
+    global nr_visited_states
+
     s0 = [start_x, start_y, fuel, -1, len(clients), 0, list(range(len(clients)))]
     open = [s0]
     depth = [0]
@@ -335,6 +348,7 @@ def depth_limited_search(max_depth):
     while open != []:
         current = open.pop(0)
         current_depth = depth.pop(0)
+        nr_visited_states += 1
 
         if (current_depth == max_depth):
             continue
@@ -368,6 +382,8 @@ def iterative_deepening_search():
         depth += 1
 
 def greedy_best_first_search(e):
+    global nr_visited_states
+
     s0 = [start_x, start_y, fuel, -1, len(clients), 0, list(range(len(clients)))]
     open = []
     heappush(open, (e(s0), s0)) # tuplu de cost euristic, nod
@@ -378,6 +394,7 @@ def greedy_best_first_search(e):
 
     while open != []:
         (c, current) = heappop(open)
+        nr_visited_states += 1
 
         if is_final(current):
             return (current, act)
@@ -399,6 +416,8 @@ def greedy_best_first_search(e):
                 visited[tuple(next_state[:2])] = next_state[2:-1]
 
 def a_star(e):
+    global nr_visited_states
+
     s0 = [start_x, start_y, fuel, -1, len(clients), 0, list(range(len(clients)))]
     open = []
     heappush(open, (0 + e(s0), s0)) # tuplu de cost euristic, nod
@@ -409,6 +428,7 @@ def a_star(e):
     while open != []:
         (_, current) = heappop(open)
         g = discovered.get(tuple(current[:-1]))[1]
+        nr_visited_states += 1
 
         if is_final(current):
             return (current, act)
@@ -429,6 +449,8 @@ def a_star(e):
                         act[tuple(next_state[:-1])] = (copy.deepcopy(current), move)
 
 def hill_climbing_search(e):
+    global nr_visited_states
+
     s0 = [start_x, start_y, fuel, -1, len(clients), 0, list(range(len(clients)))]
     current = s0
     current_cost = (0 - e(current), 0) # g(s) + h(s), g(s), h(s) = -e(s)
@@ -436,6 +458,7 @@ def hill_climbing_search(e):
     act[tuple(s0[:-1])] = None
     done = False
     while done == False:
+        nr_visited_states += 1
         maxim, g = current_cost
         next_state = None
         possible_moves = get_pos_moves(current)
@@ -454,6 +477,72 @@ def hill_climbing_search(e):
             current = next_state
             current_cost = next_maxim_cost
     return(current, act)
+
+def get_best_and_second_node(f, succ):
+    best = None
+    second = None
+    best_value = math.inf
+    second_value = math.inf
+
+    for suc in succ:
+        if f[tuple(suc[:-1])] < best_value:
+            if best_value != math.inf:
+                second_value = best_value
+                second = best
+            best_value = f[tuple(suc[:-1])]
+            best = suc
+            continue
+
+        if f[tuple(suc[:-1])] < second_value:
+            second_value = f[tuple(suc[:-1])]
+            second = suc
+
+    return (best, second)
+
+def rbfs(t, f_limit, act):
+    global nr_visited_states
+    nr_visited_states += 1
+    c, s = t
+
+    if is_final(s):
+        return (True, s)
+
+    f = {}
+    succ = []
+    possible_moves = get_pos_moves(s)
+    for move in possible_moves:
+        next_s = copy.deepcopy(s)
+        make_move(next_s, move)
+        next_value = c + 1 + h1(next_s)
+        f[tuple(next_s[:-1])] = next_value
+        act[tuple(next_s[:-1])] = (copy.deepcopy(s), move)
+        succ.append(next_s)
+
+    if succ == []:
+        return (False, math.inf)
+
+    while True:
+        best, second = get_best_and_second_node(f, succ)
+
+        if f[tuple(best[:-1])] > f_limit:
+            return (False, f[tuple(best[:-1])])
+
+        if second == None:
+            best_sec_value = math.inf
+        else:
+            best_sec_value = f[tuple(second[:-1])]
+
+        res, pos_sol = rbfs(((c + 1), best), min(best_sec_value, f_limit), act)
+
+        if not res:
+            f[tuple(best[:-1])] = pos_sol
+        else:
+            return (True, pos_sol)
+
+def recursive_best_first():
+    s0 = [start_x, start_y, fuel, -1, len(clients), 0, list(range(len(clients)))]
+    act = { tuple(s0[:-1]) : None }
+    return (rbfs((0, s0), math.inf, act), act)
 
 def get_start_pos_clients():
     return [(x,y) for (x,y,_,_,_) in clients]
@@ -545,79 +634,152 @@ def main():
 
     read_input(sys.argv[1])
 
+    global nr_visited_states
+
     # BFS optimized solution
     print("BFS")
+    start_time = time.perf_counter()
     final_state_bfs, road = breadth_first_search()
+    end_time = time.perf_counter()
+    print("Visited states: ", nr_visited_states)
+    print("Time: {0:.5f}".format(end_time - start_time))
     print_solution(final_state_bfs, road)
     print("")
 
     # Uniform cost search solution
     print("UCS")
+    nr_visited_states = 0
+    start_time = time.perf_counter()
     final_state_ucs, road = uniform_cost_search()
+    end_time = time.perf_counter()
+    print("Visited states: ", nr_visited_states)
+    print("Time: {0:.5f}".format(end_time - start_time))
     print_solution(final_state_ucs, road)
     print("")
 
     # Depth first search
     print("DFS")
+    nr_visited_states = 0
+    start_time = time.perf_counter()
     final_state_dfs, road = depth_first_search()
+    end_time = time.perf_counter()
+    print("Visited states: ", nr_visited_states)
+    print("Time: {0:.5f}".format(end_time - start_time))
     print_solution(final_state_dfs, road)
     print("")
 
     # Depth limited search
     print("DLS")
     max_depth = 50
-    if depth_limited_search(max_depth) != False:
-        final_state_dls, road = depth_limited_search(max_depth)
+    nr_visited_states = 0
+    start_time = time.perf_counter()
+    sol = depth_limited_search(max_depth)
+    end_time = time.perf_counter()
+    if sol != False:
+        final_state_dls, road = sol
+        print("Visited states: ", nr_visited_states)
+        print("Time: {0:.5f}".format(end_time - start_time))
         print_solution(final_state_dls, road)
         print("")
     else:
+        print("Visited states: ", nr_visited_states)
+        print("Time: {0:.5f}".format(end_time - start_time))
         print("Solution not found for depth limited search for given depth\n")
+        print("")
 
     # Iterative deepening
     # print("ID")
+    # nr_visited_states = 0
+    # start_time = time.perf_counter()
     # (final_state_id, road), dept = iterative_deepening_search()
+    # end_time = time.perf_counter()
+    # print("Visited states: ", nr_visited_states)
+    # print("Time: {0:.5f}".format(end_time - start_time))
     # print_solution(final_state_id, road)
     # print("Found for depth " + str(dept))
     # print("")
 
     heuristic = h1
     print("First heuristic: ", heuristic.__name__)
+    print("")
     # Greedy bfs optimized solution
     print("GBFS")
+    nr_visited_states = 0
+    start_time = time.perf_counter()
     final_state_gbfs, road = greedy_best_first_search(heuristic)
+    end_time = time.perf_counter()
+    print("Visited states: ", nr_visited_states)
+    print("Time: {0:.5f}".format(end_time - start_time))
     print_solution(final_state_gbfs, road)
     print("")
 
     # A*
     print("A*")
+    nr_visited_states = 0
+    start_time = time.perf_counter()
     final_state_a_star, road = a_star(heuristic)
+    end_time = time.perf_counter()
+    print("Visited states: ", nr_visited_states)
+    print("Time: {0:.5f}".format(end_time - start_time))
     print_solution(final_state_a_star, road)
     print("")
 
     # Hill climb search
     print("HCS")
+    nr_visited_states = 0
+    start_time = time.perf_counter()
     final_state_hcs, road = hill_climbing_search(heuristic)
+    end_time = time.perf_counter()
+    print("Visited states: ", nr_visited_states)
+    print("Time: {0:.5f}".format(end_time - start_time))
     print_solution(final_state_hcs, road)
     print("")
 
     heuristic = h2
     print("Second heuristic: ", heuristic.__name__)
+    print("")
     # Greedy bfs optimized solution
     print("GBFS")
+    nr_visited_states = 0
+    start_time = time.perf_counter()
     final_state_gbfs, road = greedy_best_first_search(heuristic)
+    end_time = time.perf_counter()
+    print("Visited states: ", nr_visited_states)
+    print("Time: {0:.5f}".format(end_time - start_time))
     print_solution(final_state_gbfs, road)
     print("")
 
     # A*
     print("A*")
+    nr_visited_states = 0
+    start_time = time.perf_counter()
     final_state_a_star, road = a_star(heuristic)
+    end_time = time.perf_counter()
+    print("Visited states: ", nr_visited_states)
+    print("Time: {0:.5f}".format(end_time - start_time))
     print_solution(final_state_a_star, road)
     print("")
 
     # Hill climb search
     print("HCS")
+    nr_visited_states = 0
+    start_time = time.perf_counter()
     final_state_hcs, road = hill_climbing_search(heuristic)
+    end_time = time.perf_counter()
+    print("Visited states: ", nr_visited_states)
+    print("Time: {0:.5f}".format(end_time - start_time))
     print_solution(final_state_hcs, road)
+    print("")
+
+    # Recursive best first
+    print("RBFS")
+    nr_visited_states = 0
+    start_time = time.perf_counter()
+    (_, final_state_rbfs), road = recursive_best_first()
+    end_time = time.perf_counter()
+    print("Visited states: ", nr_visited_states)
+    print("Time: {0:.5f}".format(end_time - start_time))
+    print_solution(final_state_rbfs, road)
     print("")
 
 
