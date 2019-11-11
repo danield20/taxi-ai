@@ -1,0 +1,89 @@
+BFS
+Visited states:  7
+Time: 0.00047
+Venit: 3
+Road: [N, N]
+Final position: (0,2)
+
+UCS
+Visited states:  12
+Time: 0.00069
+Venit: 3
+Road: [N, N]
+Final position: (0,2)
+
+DFS
+Visited states:  9
+Time: 0.00039
+Venit: 0
+Road: [P, V, V, N, N, E]
+Final position: (0,1)
+
+DLS
+Visited states:  9
+Time: 0.00039
+Venit: 0
+Road: [P, V, V, N, N, E]
+Final position: (0,1)
+
+ID
+Visited states:  58
+Time: 0.00147
+Venit: 3
+Road: [V, V]
+Final position: (2,0)
+Found for depth 3
+
+First heuristic:  h1
+
+GBFS
+Visited states:  11
+Time: 0.00082
+Venit: 3
+Road: [N, N]
+Final position: (0,2)
+
+A*
+Visited states:  11
+Time: 0.00070
+Venit: 3
+Road: [N, N]
+Final position: (0,2)
+
+HCS
+Visited states:  2
+Time: 0.00011
+Venit: 5
+Road: [P]
+Final position: (2,2)
+
+Second heuristic:  h2
+
+GBFS
+Visited states:  15
+Time: 0.00148
+Venit: 10
+Road: [V, N, P, E, S, S, D]
+Final position: (3,2)
+
+A*
+Visited states:  12
+Time: 0.00137
+Venit: 10
+Road: [N, V, P, E, S, S, D]
+Final position: (3,2)
+
+HCS
+Visited states:  3
+Time: 0.00040
+Venit: 3
+Road: [V, N]
+Final position: (1,1)
+
+RBFS for heuristic h1
+Visited states:  13
+Time: 0.00104
+Venit: 3
+Road: [N, N]
+Final position: (0,2)
+

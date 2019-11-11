@@ -1,0 +1,81 @@
+BFS
+Visited states:  4318
+Time: 0.20335
+Venit: 5
+Road: [N, N, S, N, S, N, S, N, S, N, S, E, N, E, E]
+Final position: (0,4)
+
+UCS
+Visited states:  575
+Time: 0.03234
+Venit: 10
+Road: [N, P, S, S, S, N, E, D, V, N, N, N, P, S, E, S, E, E, N, V, V, S, V]
+Final position: (2,1)
+
+DFS
+Visited states:  35
+Time: 0.00171
+Venit: 23
+Road: [V, P, E, E, E, S, D, P, E, N, N, V, V, V, V, S, S, S, D, P, N, N, E, E, E]
+Final position: (2,3)
+
+DLS
+Visited states:  44
+Time: 0.00182
+Venit: 27
+Road: [V, P, E, E, E, S, D, P, E, N, N, V, V, V, V, S, S, S, D, N]
+Final position: (3,0)
+
+First heuristic:  h1
+
+GBFS
+Visited states:  552
+Time: 0.03208
+Venit: 27
+Road: [E, P, S, S, D, V, P, N, E, N, E, E, D, S, S, N, N, N, N]
+Final position: (0,4)
+
+A*
+Visited states:  865
+Time: 0.04548
+Venit: 35
+Road: [V, P, E, E, E, S, D, N, N, V, V, P, E, S, S, D, N, P, S, S, D]
+Final position: (4,2)
+
+HCS
+Visited states:  1
+Time: 0.00016
+Venit: 20
+Road: []
+Final position: (2,1)
+
+Second heuristic:  h2
+
+GBFS
+Visited states:  1566
+Time: 0.27735
+Venit: 50
+Road: [V, P, E, E, E, S, D, N, V, N, P, S, E, S, S, D, N, N, V, V, N, P, E, S, S, D]
+Final position: (3,2)
+
+A*
+Visited states:  1042
+Time: 0.12433
+Venit: 52
+Road: [N, P, E, S, S, D, V, S, P, N, N, E, E, E, D, N, V, V, P, S, E, S, S, N, S, D]
+Final position: (4,3)
+
+HCS
+Visited states:  3
+Time: 0.00105
+Venit: 18
+Road: [E, N]
+Final position: (1,2)
+
+RBFS for heuristic h1
+Visited states:  740585
+Time: 65.55846
+Venit: 35
+Road: [V, P, E, E, E, S, D, N, V, V, N, P, E, S, S, D, N, P, S, S, D]
+Final position: (4,2)
+

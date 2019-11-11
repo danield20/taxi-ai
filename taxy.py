@@ -191,10 +191,6 @@ def is_final(state):
     if get_distance_to_best_reachable_client(state) == 100000 and state[client] == -1:
         return True
 
-    # # if we can win nothing if we continue
-    # if possible_profit(state) < state[fuel_idx] and state[client] == -1:
-    #     return True
-
     return False
 
 def h1(state):
@@ -437,15 +433,21 @@ def a_star(e):
             for move in possible_moves:
                 next_state = copy.deepcopy(current)
                 make_move(next_state, move)
+
+                if move != P or move != D:
+                    new_cost = g + 1
+                else:
+                    new_cost = g
+
                 if (discovered.get(tuple(next_state[:-1])) == None):
-                    heappush(open, (g + 1 + e(next_state), next_state))
-                    discovered[tuple(next_state[:-1])] = (current, g + 1)
+                    heappush(open, (new_cost + e(next_state), next_state))
+                    discovered[tuple(next_state[:-1])] = (current, new_cost)
                     act[tuple(next_state[:-1])] = (copy.deepcopy(current), move)
                 else:
                     prev_distance = discovered[tuple(next_state[:-1])][1]
-                    if (g + 1 < prev_distance):
-                        heappush(open, (g + 1 + e(next_state), next_state))
-                        discovered[tuple(next_state[-1])] = (current, g + 1)
+                    if (new_cost < prev_distance):
+                        heappush(open, (new_cost + e(next_state), next_state))
+                        discovered[tuple(next_state[-1])] = (current, new_cost)
                         act[tuple(next_state[:-1])] = (copy.deepcopy(current), move)
 
 def hill_climbing_search(e):
@@ -457,6 +459,7 @@ def hill_climbing_search(e):
     act = {}
     act[tuple(s0[:-1])] = None
     done = False
+
     while done == False:
         nr_visited_states += 1
         maxim, g = current_cost
@@ -465,17 +468,24 @@ def hill_climbing_search(e):
         for move in possible_moves:
             next_s = copy.deepcopy(current)
             make_move(next_s, move)
-            cost = g + 2 - e(next_s)
+
+            if move != P or move != D:
+                cost = g + 1 - e(next_s)
+            else:
+                cost = g - e(next_s)
+
             if cost > maxim:
                 next_maxim_cost = (cost, g+1)
                 next_state = next_s
                 best_move = move
+
         if next_state == None:
             done = True
         else:
             act[tuple(next_state[:-1])] = (copy.deepcopy(current), best_move)
             current = next_state
             current_cost = next_maxim_cost
+
     return(current, act)
 
 def get_best_and_second_node(f, succ):
@@ -513,7 +523,12 @@ def rbfs(t, f_limit, act):
     for move in possible_moves:
         next_s = copy.deepcopy(s)
         make_move(next_s, move)
-        next_value = c + 1 + h1(next_s)
+
+        if move != P or move != D:
+            next_value = c + 1 + h1(next_s)
+        else:
+            next_value = c + h1(next_s)
+
         f[tuple(next_s[:-1])] = next_value
         act[tuple(next_s[:-1])] = (copy.deepcopy(s), move)
         succ.append(next_s)
@@ -670,7 +685,7 @@ def main():
 
     # Depth limited search
     print("DLS")
-    max_depth = 50
+    max_depth = 25
     nr_visited_states = 0
     start_time = time.perf_counter()
     sol = depth_limited_search(max_depth)
@@ -687,17 +702,17 @@ def main():
         print("Solution not found for depth limited search for given depth\n")
         print("")
 
-    # Iterative deepening
-    # print("ID")
-    # nr_visited_states = 0
-    # start_time = time.perf_counter()
-    # (final_state_id, road), dept = iterative_deepening_search()
-    # end_time = time.perf_counter()
-    # print("Visited states: ", nr_visited_states)
-    # print("Time: {0:.5f}".format(end_time - start_time))
-    # print_solution(final_state_id, road)
-    # print("Found for depth " + str(dept))
-    # print("")
+    # Iterative deepening, comment this for test >= 3
+    print("ID")
+    nr_visited_states = 0
+    start_time = time.perf_counter()
+    (final_state_id, road), dept = iterative_deepening_search()
+    end_time = time.perf_counter()
+    print("Visited states: ", nr_visited_states)
+    print("Time: {0:.5f}".format(end_time - start_time))
+    print_solution(final_state_id, road)
+    print("Found for depth " + str(dept))
+    print("")
 
     heuristic = h1
     print("First heuristic: ", heuristic.__name__)
@@ -772,7 +787,7 @@ def main():
     print("")
 
     # Recursive best first
-    print("RBFS")
+    print("RBFS for heuristic h1")
     nr_visited_states = 0
     start_time = time.perf_counter()
     (_, final_state_rbfs), road = recursive_best_first()
